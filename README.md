@@ -1,0 +1,3 @@
+- current location
+- area name search
+- pick place from map
