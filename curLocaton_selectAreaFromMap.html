@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Dhaka Road Problems - Location Selector</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        #map {
+            height: 450px;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        input {
+            padding: 10px;
+            width: 65%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px;
+            margin: 5px 3px 5px 0;
+            cursor: pointer;
+        }
+
+        #results button {
+            display: block;
+            width: 100%;
+            text-align: left;
+        }
+
+        #coordinates {
+            padding: 12px;
+            background: #f1f1f1;
+            margin-top: 15px;
+            overflow-wrap: anywhere;
+        }
+
+        #status {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Report a Road Problem</h2>
+
+    <!-- Method 1: Current location -->
+    <button id="currentLocationBtn" type="button">
+        Use My Current Location
+    </button>
+
+    <hr>
+
+
+    <!-- Method 3: Click the map -->
+    <h3>Select the Exact Road Location</h3>
+
+    <p>
+        Click on the map to place your road-problem marker.
+    </p>
+
+    <div id="map"></div>
+
+    <div id="coordinates">
+        <strong>Selected location:</strong>
+        <p id="latitude">Latitude: Not selected</p>
+        <p id="longitude">Longitude: Not selected</p>
+    </div>
+
+    <p id="status">
+        Choose your road-problem location using any method above.
+    </p>
+
+    <p>
+        Map data ©
+        <a href="https://www.openstreetmap.org/copyright">
+            OpenStreetMap contributors
+        </a>
+    </p>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // 1. Create the map
+        var map = L.map('map', {
+            minZoom: 0,
+            maxZoom: 19
+        });
+
+        map.setView([23.8103, 90.4125], 13);
+
+        // 2. Load OpenStreetMap tiles
+        L.tileLayer(
+            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }
+        ).addTo(map);
+
+        // Variables for the markers and circle
+        var selectedMarker = null;
+        var accuracyCircle = null;
+
+        // Store the currently selected coordinates
+        var selectedLat = null;
+        var selectedLng = null;
+
+        // HTML elements
+        var latitudeText = document.getElementById('latitude');
+        var longitudeText = document.getElementById('longitude');
+        var statusText = document.getElementById('status');
+        var resultsDiv = document.getElementById('results');
+
+        // Function to select a location
+        function selectLocation(lat, lng, zoom, message) {
+            selectedLat = lat;
+            selectedLng = lng;
+
+            var location = [lat, lng];
+
+            if (selectedMarker) {
+                selectedMarker.setLatLng(location);
+            } else {
+                selectedMarker = L.marker(location).addTo(map);
+            }
+
+            // Hide the previous GPS accuracy circle
+            if (accuracyCircle) {
+                map.removeLayer(accuracyCircle);
+                accuracyCircle = null;
+            }
+
+            map.setView(location, zoom);
+
+            latitudeText.textContent = 'Latitude: ' + lat.toFixed(6);
+            longitudeText.textContent = 'Longitude: ' + lng.toFixed(6);
+
+            statusText.textContent = message;
+        }
+
+        // METHOD 1: Use the user's current GPS location
+        document.getElementById('currentLocationBtn')
+            .addEventListener('click', function () {
+
+                if (!navigator.geolocation) {
+                    statusText.textContent =
+                        'Geolocation is not supported by your browser.';
+                    return;
+                }
+
+                statusText.textContent =
+                    'Getting your current location...';
+
+                navigator.geolocation.getCurrentPosition(
+                    function (pos) {
+                        var lat = pos.coords.latitude;
+                        var lng = pos.coords.longitude;
+                        var accuracy = pos.coords.accuracy;
+
+                        selectLocation(
+                            lat,
+                            lng,
+                            17,
+                            'Current location selected. Accuracy is approximately ' +
+                            Math.round(accuracy) + ' metres.'
+                        );
+
+                        accuracyCircle = L.circle([lat, lng], {
+                            radius: accuracy
+                        }).addTo(map);
+                    },
+
+                    function (err) {
+                        if (err.code === 1) {
+                            statusText.textContent =
+                                'Location permission denied. Allow location access in your browser.';
+                        } else if (err.code === 2) {
+                            statusText.textContent =
+                                'Your current location is unavailable.';
+                        } else {
+                            statusText.textContent =
+                                'Location request timed out. Please try again.';
+                        }
+                    },
+
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 15000,
+                        maximumAge: 0
+                    }
+                );
+            });
+
+
+
+        // METHOD 3: Click directly on the map
+        map.on('click', function (event) {
+            var lat = event.latlng.lat;
+            var lng = event.latlng.lng;
+
+            selectLocation(
+                lat,
+                lng,
+                map.getZoom(),
+                'Map point selected. Confirm that the marker is on the correct road.'
+            );
+
+            console.log('Selected latitude:', selectedLat);
+            console.log('Selected longitude:', selectedLng);
+        });
+    </script>
+
+</body>
+
+</html>
